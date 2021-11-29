@@ -1,14 +1,19 @@
+from django.core.checks import messages
 from django.http.response import Http404
 from django.shortcuts import redirect, render
 from django.http import HttpResponse
 import datetime as dt
 
+from news.models import Article
+
 # Create your views here.
-def welcome(request):
-    return render(request, 'welcome.html')
+# def welcome(request):
+#     return render(request, 'welcome.html')
 
 def news_of_day(request):
     date = dt.date.today()
+    news = Article.todays_news()
+    return render(request, 'all-news/today-news.html', {"date":date, "news":news})
     # day = convert_dates(date)
     # html = f'''
     # <html>
@@ -17,7 +22,7 @@ def news_of_day(request):
     # </body>
     # </html>
     # '''
-    return HttpResponse(request, 'all-news/today-news.html',{"date":date})
+    return render(request, 'all-news/today-news.html',{"date":date})
     
 def convert_dates(dates):
     day_number = dt.date.weekday(dates)
@@ -46,4 +51,25 @@ def past_days_news(request, past_date):
         raise Http404()
     if date == dt.date.today():
         return redirect(news_of_day)
-    return render(request,'all-news/past-news.html',{"date":date})
+
+    news = Article.days_news(date)
+    return render(request,'all-news/past-news.html',{"date":date,"news":news})
+
+def search_results(request):
+    if 'article' in request.GET and request.GET["article"]:
+        search_term = request.GET.get("article")
+        searched_articles = Article.search_by_title(search_term)
+        messages = f"{search_term}"
+        return render(request, 'all-news/search.html', {"messages":messages, "articles":searched_articles})
+
+    else:
+        messages = "You didnt search anything"
+        return render(request, 'all-news/search.html',{"messages":messages})
+
+
+def article(request,article_id):
+    try:
+        article = Article.objects.get(id = article_id)
+    except Article.DoesNotExist:
+        raise Http404()
+    return render(request,"all-news/article.html", {"article":article})
